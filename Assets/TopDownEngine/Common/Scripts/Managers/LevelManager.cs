@@ -9,22 +9,19 @@ using MoreMountains.Tools;
 
 
 namespace MoreMountains.TopDownEngine
-{	
+{
 	/// <summary>
 	/// Spawns the player, handles checkpoints and respawn
 	/// </summary>
 	[AddComponentMenu("TopDown Engine/Managers/Level Manager")]
 	public class LevelManager : MMSingleton<LevelManager>, MMEventListener<TopDownEngineEvent>
-	{	
+	{
 		/// the prefab you want for your player
 		[Header("Instantiate Characters")]
-		[MMInformation("The LevelManager is responsible for handling spawn/respawn, checkpoints management and level bounds. Here you can define one or more playable characters for your level..",MMInformationAttribute.InformationType.Info,false)]
+		[MMInformation("The LevelManager is responsible for handling spawn/respawn, checkpoints management and level bounds. Here you can define one or more playable characters for your level..", MMInformationAttribute.InformationType.Info, false)]
 		/// should the player IDs be auto attributed (usually yes)
 		[Tooltip("should the player IDs be auto attributed (usually yes)")]
 		public bool AutoAttributePlayerIDs = true;
-		/// the list of player prefabs to instantiate
-		[Tooltip("The list of player prefabs this level manager will instantiate on Start")]
-		public Character[] PlayerPrefabs ;
 
 		[Header("Characters already in the scene")]
 		[MMInformation("It's recommended to have the LevelManager instantiate your characters, but if instead you'd prefer to have them already present in the scene, just bind them in the list below.", MMInformationAttribute.InformationType.Info, false)]
@@ -44,18 +41,18 @@ namespace MoreMountains.TopDownEngine
 		/// A list of this level's points of entry, which can be used from other levels as initial targets
 		[Tooltip("A list of this level's points of entry, which can be used from other levels as initial targets")]
 		public Transform[] PointsOfEntry;
-        				
+
 		[Space(10)]
 		[Header("Intro and Outro durations")]
-		[MMInformation("Here you can specify the length of the fade in and fade out at the start and end of your level. You can also determine the delay before a respawn.",MMInformationAttribute.InformationType.Info,false)]
+		[MMInformation("Here you can specify the length of the fade in and fade out at the start and end of your level. You can also determine the delay before a respawn.", MMInformationAttribute.InformationType.Info, false)]
 		/// duration of the initial fade in (in seconds)
 		[Tooltip("the duration of the initial fade in (in seconds)")]
-		public float IntroFadeDuration=1f;
+		public float IntroFadeDuration = 1f;
 
 		public float SpawnDelay = 0f;
 		/// duration of the fade to black at the end of the level (in seconds)
 		[Tooltip("the duration of the fade to black at the end of the level (in seconds)")]
-		public float OutroFadeDuration=1f;
+		public float OutroFadeDuration = 1f;
 		/// the ID to use when triggering the event (should match the ID on the fader you want to use)
 		[Tooltip("the ID to use when triggering the event (should match the ID on the fader you want to use)")]
 		public int FaderID = 0;
@@ -75,33 +72,33 @@ namespace MoreMountains.TopDownEngine
 		/// if this is true, this level will use the level bounds defined on this LevelManager. Set it to false when using the Rooms system.
 		[Tooltip("if this is true, this level will use the level bounds defined on this LevelManager. Set it to false when using the Rooms system.")]
 		public bool UseLevelBounds = true;
-        
+
 		[Header("Scene Loading")]
 		/// the method to use to load the destination level
 		[Tooltip("the method to use to load the destination level")]
 		public MMLoadScene.LoadingSceneModes LoadingSceneMode = MMLoadScene.LoadingSceneModes.MMSceneLoadingManager;
 		/// the name of the MMSceneLoadingManager scene you want to use
 		[Tooltip("the name of the MMSceneLoadingManager scene you want to use")]
-		[MMEnumCondition("LoadingSceneMode", (int) MMLoadScene.LoadingSceneModes.MMSceneLoadingManager)]
+		[MMEnumCondition("LoadingSceneMode", (int)MMLoadScene.LoadingSceneModes.MMSceneLoadingManager)]
 		public string LoadingSceneName = "LoadingScreen";
 		/// the settings to use when loading the scene in additive mode
 		[Tooltip("the settings to use when loading the scene in additive mode")]
 		[MMEnumCondition("LoadingSceneMode", (int)MMLoadScene.LoadingSceneModes.MMAdditiveSceneLoadingManager)]
-		public MMAdditiveSceneLoadingManagerSettings AdditiveLoadingSettings; 
-		
-		[Header("Feedbacks")] 
+		public MMAdditiveSceneLoadingManagerSettings AdditiveLoadingSettings;
+
+		[Header("Feedbacks")]
 		/// if this is true, an event will be triggered on player instantiation to set the range target of all feedbacks to it
 		[Tooltip("if this is true, an event will be triggered on player instantiation to set the range target of all feedbacks to it")]
 		public bool SetPlayerAsFeedbackRangeCenter = false;
-        
+
 		/// the level limits, camera and player won't go beyond this point.
-		public virtual Bounds LevelBounds {  get { return (_collider==null)? new Bounds(): _collider.bounds; } }
+		public virtual Bounds LevelBounds { get { return (_collider == null) ? new Bounds() : _collider.bounds; } }
 		public virtual Collider BoundsCollider { get; protected set; }
 		public virtual Collider2D BoundsCollider2D { get; protected set; }
 
 		/// the elapsed time since the start of the level
-		public virtual TimeSpan RunningTime { get { return DateTime.UtcNow - _started ;}}
-        
+		public virtual TimeSpan RunningTime { get { return DateTime.UtcNow - _started; } }
+
 		// private stuff
 		public virtual List<CheckPoint> Checkpoints { get; protected set; }
 		public virtual List<Character> Players { get; protected set; }
@@ -111,7 +108,7 @@ namespace MoreMountains.TopDownEngine
 		protected Collider _collider;
 		protected Collider2D _collider2D;
 		protected Vector3 _initialSpawnPointPosition;
-		
+
 		/// <summary>
 		/// Statics initialization to support enter play modes
 		/// </summary>
@@ -120,7 +117,7 @@ namespace MoreMountains.TopDownEngine
 		{
 			_instance = null;
 		}
-		
+
 		/// <summary>
 		/// On awake, instantiates the player
 		/// </summary>
@@ -134,27 +131,27 @@ namespace MoreMountains.TopDownEngine
 		/// <summary>
 		/// On Start we grab our dependencies and initialize spawn
 		/// </summary>
-		protected virtual void Start()
+		public void Init(Character newPlayer)
 		{
-			StartCoroutine(InitializationCoroutine());
+			StartCoroutine(InitializationCoroutine(newPlayer));
 		}
 
-		protected virtual IEnumerator InitializationCoroutine()
+		protected virtual IEnumerator InitializationCoroutine(Character newPlayer)
 		{
 			if (SpawnDelay > 0f)
 			{
-				yield return MMCoroutine.WaitFor(SpawnDelay);    
+				yield return MMCoroutine.WaitFor(SpawnDelay);
 			}
 
 			BoundsCollider = _collider;
 			BoundsCollider2D = _collider2D;
-			InstantiatePlayableCharacters();
+			InstantiatePlayableCharacters(newPlayer);
 
 			if (UseLevelBounds)
 			{
 				MMCameraEvent.Trigger(MMCameraEventTypes.SetConfiner, null, BoundsCollider, BoundsCollider2D);
-			}            
-            
+			}
+
 			if (Players == null || Players.Count == 0) { yield break; }
 
 			Initialization();
@@ -168,7 +165,7 @@ namespace MoreMountains.TopDownEngine
 			}
 			else
 			{
-				SpawnMultipleCharacters ();
+				SpawnMultipleCharacters();
 			}
 
 			CheckpointAssignment();
@@ -190,63 +187,23 @@ namespace MoreMountains.TopDownEngine
 			MMGameEvent.Trigger("CameraBound");
 		}
 
-		/// <summary>
-		/// A method meant to be overridden by each multiplayer level manager to describe how to spawn characters
-		/// </summary>
+
 		protected virtual void SpawnMultipleCharacters()
 		{
 
 		}
 
-		/// <summary>
-		/// Instantiate playable characters based on the ones specified in the PlayerPrefabs list in the LevelManager's inspector.
-		/// </summary>
-		protected virtual void InstantiatePlayableCharacters()
+
+		protected virtual void InstantiatePlayableCharacters(Character newPlayer)
 		{
 			_initialSpawnPointPosition = (InitialSpawnPoint == null) ? Vector3.zero : InitialSpawnPoint.transform.position;
-			
-			Players = new List<Character> ();
 
-			if (GameManager.Instance.PersistentCharacter != null)
-			{
-				Players.Add(GameManager.Instance.PersistentCharacter);
-				return;
-			}
-			
-			// we check if there's a stored character in the game manager we should instantiate
-			if (GameManager.Instance.StoredCharacter != null)
-			{
-				Character newPlayer = Instantiate(GameManager.Instance.StoredCharacter, _initialSpawnPointPosition, Quaternion.identity);
-				newPlayer.name = GameManager.Instance.StoredCharacter.name;
-				Players.Add(newPlayer);
-				return;
-			}
-
-			if ((SceneCharacters != null) && (SceneCharacters.Count > 0))
-			{
-				foreach (Character character in SceneCharacters)
-				{
-					Players.Add(character);
-				}
-				return;
-			}
-
-			if (PlayerPrefabs == null) { return; }
+			Players = new List<Character>();
 
 			// player instantiation
-			if (PlayerPrefabs.Length != 0)
-			{ 
-				foreach (Character playerPrefab in PlayerPrefabs)
-				{
-					Character newPlayer = Instantiate (playerPrefab, _initialSpawnPointPosition, Quaternion.identity);
-					newPlayer.name = playerPrefab.name;
-					Players.Add(newPlayer);
-
-					if (playerPrefab.CharacterType != Character.CharacterTypes.Player)
-					{
-						Debug.LogWarning ("LevelManager : The Character you've set in the LevelManager isn't a Player, which means it's probably not going to move. You can change that in the Character component of your prefab.");
-					}
-				}
+			if (!Players.Contains(newPlayer))
+			{
+				Players.Add(newPlayer);
 			}
 		}
 
@@ -296,7 +253,7 @@ namespace MoreMountains.TopDownEngine
 		protected virtual void Initialization()
 		{
 			Checkpoints = FindObjectsByType<CheckPoint>(FindObjectsSortMode.None).OrderBy(o => o.CheckPointOrder).ToList();
-			_savedPoints =GameManager.Instance.Points;
+			_savedPoints = GameManager.Instance.Points;
 			_started = DateTime.UtcNow;
 		}
 
@@ -349,17 +306,17 @@ namespace MoreMountains.TopDownEngine
 		protected virtual IEnumerator GotoLevelCo(string levelName)
 		{
 			if (Players != null && Players.Count > 0)
-			{ 
+			{
 				foreach (Character player in Players)
 				{
-					player.Disable ();	
-				}	    		
+					player.Disable();
+				}
 			}
 
 			MMFadeInEvent.Trigger(OutroFadeDuration, FadeCurve, FaderID);
-            
+
 			if (Time.timeScale > 0.0f)
-			{ 
+			{
 				yield return new WaitForSeconds(OutroFadeDuration);
 			}
 			// we trigger an unPause event for the GameManager (and potentially other classes)
@@ -371,7 +328,7 @@ namespace MoreMountains.TopDownEngine
 			switch (LoadingSceneMode)
 			{
 				case MMLoadScene.LoadingSceneModes.UnityNative:
-					SceneManager.LoadScene(destinationScene);			        
+					SceneManager.LoadScene(destinationScene);
 					break;
 				case MMLoadScene.LoadingSceneModes.MMSceneLoadingManager:
 					MMSceneLoadingManager.LoadScene(destinationScene, LoadingSceneName);
@@ -389,7 +346,7 @@ namespace MoreMountains.TopDownEngine
 		{
 			if (Players.Count < 2)
 			{
-				StartCoroutine (PlayerDeadCo ());
+				StartCoroutine(PlayerDeadCo());
 			}
 		}
 
@@ -421,11 +378,6 @@ namespace MoreMountains.TopDownEngine
 		/// <returns>The player co.</returns>
 		protected virtual IEnumerator SoloModeRestart()
 		{
-			if ((PlayerPrefabs.Length <= 0) && (SceneCharacters.Count <= 0))
-			{
-				yield break;
-			}
-
 			// if we've setup our game manager to use lives (meaning our max lives is more than zero)
 			if (GameManager.Instance.MaximumLives > 0)
 			{
@@ -457,11 +409,6 @@ namespace MoreMountains.TopDownEngine
 				CurrentCheckpoint = InitialSpawnPoint;
 			}
 
-			if (Players[0] == null)
-			{
-				InstantiatePlayableCharacters();
-			}
-
 			if (CurrentCheckpoint != null)
 			{
 				CurrentCheckpoint.SpawnPlayer(Players[0]);
@@ -472,7 +419,7 @@ namespace MoreMountains.TopDownEngine
 			}
 
 			_started = DateTime.UtcNow;
-			
+
 			MMCameraEvent.Trigger(MMCameraEventTypes.StartFollowing);
 
 			// we send a new points event for the GameManager to catch (and other classes that may listen to it too)
@@ -489,6 +436,9 @@ namespace MoreMountains.TopDownEngine
 		{
 			foreach (Character player in Players)
 			{
+				if (player == null)
+					continue;
+
 				CharacterPause characterPause = player.FindAbility<CharacterPause>();
 				if (characterPause == null)
 				{
